@@ -1,9 +1,9 @@
 <h1 align="center">Hi 👋, I'm Oz Abramovich</h1>
 <h3 align="center">A passionate cybersecurity engineer and red teamer</h3>
 
-<p align="left"> <img src="https://komarev.com/ghpvc/?username=dark-avenger-reborn&label=Profile%20views&color=0e75b6&style=flat" alt="dark-avenger-reborn" /> </p>
+<p align="left"> <img src="https://komarev.com/ghpvc/?username=dark-avenger-reborn&label=Profile%20views&color=0e75b6&style=flat" alt="Dark-Avenger-Reborn" /> </p>
 
-<p align="left"> <a href="https://github.com/ryo-ma/github-profile-trophy"><img src="https://github-profile-trophy.vercel.app/?username=dark-avenger-reborn" alt="dark-avenger-reborn" /></a> </p>
+<p align="left"> <a href="https://github.com/ryo-ma/github-profile-trophy"><img src="https://github-profile-trophy.vercel.app/?username=dark-avenger-reborn" alt="Dark-Avenger-Reborn" /></a> </p>
 
 - 🔭 I’m currently working on [Jeopardy-Engine](https://github.com/Dark-Avenger-Reborn/Jeopardy-Engine)
 
