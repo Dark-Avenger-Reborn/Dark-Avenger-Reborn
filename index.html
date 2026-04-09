@@ -1309,8 +1309,6 @@ function parseMarkdown(raw) {
   // Decode base64, strip carriage returns
   let md = raw.replace(/\r/g, '');
 
-  // Escape HTML (except we'll selectively allow some tags from images etc)
-  const escMap = {'&':'&amp;','<':'&lt;','>':'&gt;'};
   // We'll process block by block
 
   const lines = md.split('\n');
@@ -1318,6 +1316,97 @@ function parseMarkdown(raw) {
   let inCode = false, codeLang = '', codeLines = [];
   let inList = false, listType = '';
   let inTable = false, tableRows = [];
+
+  function isSafeUrl(url) {
+    const v = (url || '').trim();
+    if(!v) return false;
+    if(/^https?:\/\//i.test(v)) return true;
+    if(/^mailto:/i.test(v)) return true;
+    if(/^#/.test(v)) return true;
+    if(/^\.\.?\//.test(v)) return true;
+    if(/^\//.test(v)) return true;
+    return false;
+  }
+
+  function isSafeSrcset(srcset) {
+    const parts = (srcset || '').split(',').map(s => s.trim()).filter(Boolean);
+    if(!parts.length) return false;
+    return parts.every(p => {
+      const url = p.split(/\s+/)[0];
+      return isSafeUrl(url);
+    });
+  }
+
+  function sanitizeTagAttrs(tag, attrText) {
+    const t = tag.toLowerCase();
+    const allowed = {
+      a: new Set(['href','target','rel','title']),
+      img: new Set(['src','alt','title','width','height']),
+      source: new Set(['srcset','media','type']),
+      details: new Set(['open']),
+      summary: new Set([]),
+      picture: new Set([]),
+      p: new Set([]),
+      br: new Set([])
+    };
+
+    const set = allowed[t];
+    if(!set) return '';
+    const out = [];
+
+    // boolean attr support for <details open>
+    if(t === 'details' && /\bopen\b/i.test(attrText || '')) out.push('open');
+
+    const attrRe = /([a-zA-Z_:][-a-zA-Z0-9_:.]*)\s*=\s*("[^"]*"|'[^']*'|[^\s"'=<>`]+)/g;
+    let m;
+    while((m = attrRe.exec(attrText || ''))) {
+      const name = m[1].toLowerCase();
+      if(!set.has(name)) continue;
+
+      let val = m[2];
+      if((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+        val = val.slice(1, -1);
+      }
+
+      if((name === 'href' || name === 'src') && !isSafeUrl(val)) continue;
+      if(name === 'srcset' && !isSafeSrcset(val)) continue;
+
+      const safeVal = val
+        .replace(/&/g,'&amp;')
+        .replace(/"/g,'&quot;')
+        .replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;');
+      out.push(`${name}="${safeVal}"`);
+    }
+    return out.length ? ' ' + out.join(' ') : '';
+  }
+
+  function tryRenderSafeHtmlLine(line) {
+    const pair = line.match(/^\s*<\s*([a-z0-9-]+)([^>]*)>([\s\S]*)<\s*\/\s*\1\s*>\s*$/i);
+    if(pair) {
+      const tag = pair[1].toLowerCase();
+      const rawAttrs = pair[2] || '';
+      const inner = pair[3] || '';
+      const pairAllowed = new Set(['summary','a','p']);
+      if(!pairAllowed.has(tag)) return null;
+      const attrs = sanitizeTagAttrs(tag, rawAttrs);
+      return `<${tag}${attrs}>${inlineFormat(inner)}</${tag}>`;
+    }
+
+    const m = line.match(/^\s*<\s*(\/?)\s*([a-z0-9-]+)([^>]*)>\s*$/i);
+    if(!m) return null;
+
+    const closing = !!m[1];
+    const tag = m[2].toLowerCase();
+    const rawAttrs = m[3] || '';
+    const allowed = new Set(['details','summary','picture','source','img','a','p','br']);
+    if(!allowed.has(tag)) return null;
+
+    if(closing) return `</${tag}>`;
+    const selfClose = /\/\s*$/.test(rawAttrs) || tag === 'img' || tag === 'source' || tag === 'br';
+    const attrs = sanitizeTagAttrs(tag, rawAttrs);
+    return selfClose ? `<${tag}${attrs} />` : `<${tag}${attrs}>`;
+  }
 
   function flushList() {
     if(!inList) return;
@@ -1408,12 +1497,10 @@ function parseMarkdown(raw) {
     if(inList && line.trim() === '') { flushList(); html += '<br>'; continue; }
     if(inList && !/^[\-\*\+\d]/.test(line)) flushList();
 
-    // Standalone img tags (already resolved to absolute URLs by pre-processing)
-    if(/^\s*<img\s/i.test(line)) {
+    const safeHtml = tryRenderSafeHtmlLine(line);
+    if(safeHtml !== null) {
       flushList(); flushTable();
-      // Pass through directly — strip only truly dangerous attributes
-      const safe = line.replace(/\s*on\w+="[^"]*"/gi,'').replace(/javascript:/gi,'');
-      html += `<div style="margin:12px 0;">${safe}</div>`;
+      html += safeHtml;
       continue;
     }
 
