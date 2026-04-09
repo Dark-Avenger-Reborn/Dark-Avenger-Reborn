@@ -11,7 +11,7 @@
 
 - 📫 How to reach me **ozabramovs@gmail.com**
 
-- 📄 Know about my experiences [https://byteoftech.net/](https://byteoftech.net/)
+- 📄 Know about my experiences [https://dark-avenger-reborn.github.io/Dark-Avenger-Reborn](https://dark-avenger-reborn.github.io/Dark-Avenger-Reborn)
 
 <h3 align="left">Connect with me:</h3>
 <p align="left">
